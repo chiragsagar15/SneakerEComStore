@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main
+      - master  # Adjust this to match your branch
 
 jobs:
   deploy:
@@ -11,35 +11,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Checkout Code
     - name: Checkout Code
       uses: actions/checkout@v3
 
+    # Step 2: Set up Python (on the GitHub runner, not EC2)
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
         python-version: 3.9
 
-    - name: Install Dependencies
+    # Step 3: Install dependencies locally (optional, primarily for testing)
+    - name: Install Dependencies Locally
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Deploy to EC2
+    # Step 4: Deploy code to EC2
+    - name: Deploy Code to EC2
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         source: "."
-        target: "/home/ubuntu/app"
+        target: "/home/ec2-user/app"  # Adjust target path for Amazon Linux
 
-    - name: SSH into EC2 and restart app
+    # Step 5: Configure and restart the application on EC2
+    - name: Restart Flask App on EC2
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd /home/ubuntu/app
-          sudo pkill -f "python3 app.py" || true
+          # Update system and install dependencies
+          sudo yum update -y
+          sudo yum install python3 python3-pip -y
+          pip3 install --user -r /home/ec2-user/app/requirements.txt
+
+          # Navigate to project directory
+          cd /home/ec2-user/app
+
+          # Stop any running instances of the app
+          sudo pkill -f "gunicorn" || true
+
+          # Start the app using Gunicorn
           nohup gunicorn -b 0.0.0.0:5000 app:app > app.log 2>&1 &
