@@ -46,6 +46,6 @@ jobs:
           pip3 install --user -r /home/ec2-user/app/requirements.txt
           cd /home/ec2-user/app
           pkill -f "gunicorn" || true
-          nohup gunicorn --workers 3 --bind 0.0.0.0:5000 app:app > app.log 2>&1 &
+          gunicorn -bind 0.0.0.0:5000 app:app > app.log 2>&1 &
           sleep 5
           disown
