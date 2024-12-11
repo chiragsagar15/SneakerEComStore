@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - master 
+      - master
 
 jobs:
   deploy:
@@ -31,7 +31,7 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         source: "."
-        target: "/home/ec2-user/app"  
+        target: "/home/ec2-user/app"
 
     - name: Restart Flask App on EC2
       uses: appleboy/ssh-action@master
@@ -47,3 +47,5 @@ jobs:
           cd /home/ec2-user/app
           pkill -f "gunicorn" || true
           nohup gunicorn --workers 3 --bind 0.0.0.0:5000 app:app > app.log 2>&1 &
+          sleep 5
+          disown
